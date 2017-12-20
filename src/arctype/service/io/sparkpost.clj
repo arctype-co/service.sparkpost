@@ -13,19 +13,25 @@
 
 (def Config
   {:api-key S/Str
+   (S/optional-key :sandbox?) S/Bool
    (S/optional-key :endpoint) S/Str
    (S/optional-key :http) http-client/Config})
 
 (def default-config
   {:endpoint "https://api.sparkpost.com/api"
-   :http {}})
+   :sandbox? false
+   :http {:throttle
+          {:rate 10
+           :period :minute
+           :burst 2}}})
 
 (def From
   {:name S/Str
    :email S/Str})
 
 (def InlineRecipient
-  {:address {:email S/Str :name S/Str}
+  {:address {:email S/Str 
+             (S/optional-key :name) S/Str}
    (S/optional-key :tags) [S/Str]
    (S/optional-key :metadata) {S/Keyword S/Any}
    (S/optional-key :substitution_data) {S/Keyword S/Any}})
@@ -50,8 +56,8 @@
 (def Content
   (S/conditional
     #(some? (:subject %)) InlineContent
-    :else S/Str ; template_id
-    ))
+    :else {:template_id S/Str
+           (S/optional-key :use_draft_template) S/Bool}))
 
 (def Options
   {(S/optional-key :start_time) S/Str ; Delay generation of messages until this datetime. Format YYYY-MM-DDTHH:MM:SS±HH:MM. Example: 2017-02-11T08:00:00-04:00.
@@ -138,7 +144,10 @@
   [{:keys [config] :as this}
    params :- Transmission]
   (with-resources this [:http]
-    (let [req (api-post-request this "/v1/transmissions" params)]
+    (let [params (if (:sandbox? config)
+                   (assoc-in params [:options :sandbox] true)
+                   params)
+          req (api-post-request this "/v1/transmissions" params)]
       (http-client/request! http req (transmission-response-chan)))))
 
 (defrecord SparkPostClient [config])
