@@ -85,7 +85,7 @@
   {:results
    {:total_rejected_recipients S/Int
     :total_accepted_recipients S/Int
-    :id S/Int
+    :id S/Str
     S/Keyword S/Any}
    S/Keyword S/Any})
 
